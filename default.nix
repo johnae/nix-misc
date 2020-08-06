@@ -89,6 +89,23 @@ let
       '';
     };
 
+  ## Just store it directly in nix store without containing /bin dir,
+  ## otherwise same as above.
+  writeStrictShellScript = name: text:
+    writeTextFile {
+      inherit name;
+      executable = true;
+      text = ''
+        #!${stdenv.shell}
+        set -euo pipefail
+        ${text}
+      '';
+      checkPhase = ''
+        ${stdenv.shell} -n $out
+        ${shellcheck}/bin/shellcheck -e SC1117 -s bash -f tty $out
+      '';
+    };
+
 
   ## Takes shell code on stdin, runs shellcheck on it and automatically adds
   ## the inofficial strict-mode - eg. "set -euo pipefail"
@@ -122,6 +139,7 @@ in
   inherit changeFirst capitalize uncapitalize toCamelCase
     toMixedCase toSnakeCase isUpper isLower substituteInPlace
     isCamelCase isMixedCase isSnakeCase setToStringSep
-    mkStrictShellScript writeStrictShellScriptBin strict-bash;
+    mkStrictShellScript writeStrictShellScript
+    writeStrictShellScriptBin strict-bash;
 
 }
