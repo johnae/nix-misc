@@ -1,8 +1,11 @@
 {
   description = "Assorted utility functions and derivations for Nix";
 
-  outputs = { self }:
+  outputs = { self, nixpkgs }:
     {
-      overlay = final: prev: prev.callPackage ./. { };
+      overlay = final: prev: import ./. {
+        inherit (prev)
+          stdenv lib shellcheck coreutils writeTextFile;
+      };
     };
 }
