@@ -25,22 +25,15 @@ let
     (stringToCharacters s)
   );
   isSnakeCase = s: s == (toSnakeCase s);
+
   setToStringSep = sep: x: fun: concatStringsSep sep (mapAttrsToList fun x);
-  ## A helper (for below mainly) for substituting variables in place in a
-  ## shell script using this enables one to write shell scripts with syntax
-  ## highlighting
+
   substituteInPlace = file: substitutions: ''
     substituteInPlace ${file} \
       ${setToStringSep " "
     substitutions
     (name: value: '' --subst-var-by ${name} "${value}"'')}
   '';
-
-  #########
-  toMultiLineString = setToStringSep "\n";
-
-  ## Replace spaces with "-"
-  spaceToMinus = s: stringAsChars (x: if x == " " then "-" else x) s;
 
   ## A helper for creating shell script derivations from files
   ## see above - enables one to get syntax highlighting while
@@ -72,52 +65,6 @@ let
 
         ## shellcheck
         ${shellcheck}/bin/shellcheck -x -e SC1117 -s bash -f tty $out/bin/${name}
-      '';
-    };
-
-  ## A helper for creating shell script derivations from files
-  ## see above - enables one to get syntax highlighting while
-  ## developing.
-  cmdWithSubCommands =
-    { name
-    , paths
-    , description
-    }: stdenv.mkDerivation {
-      inherit name;
-      meta = {
-        description = "${description} Part of insane tooling.";
-        priority = 6;
-      };
-      passAsFile = [ "text" ];
-      preferLocalBuild = true;
-      allowSubstitutes = false;
-      destination = "/bin/${name}";
-      text = ''
-        #!${stdenv.shell}
-        set -euo pipefail
-        export PATH=${makeSearchPath "bin" paths }:$PATH
-        cmd=''${1:-}
-        base="$(${coreutils}/bin/basename "$0")"
-        if [ -z "$cmd" ]; then
-          "$base"-help
-        fi
-        shift
-        if builtin type -P "$base"-"$cmd" >/dev/null; then
-          "$base"-"$cmd" "$@"
-        else
-          echo Unknown command "$cmd"
-          exit 1
-        fi
-      '';
-      buildCommand = ''
-        n=$out$destination
-        mkdir -p "$(dirname "$n")"
-        if [ -e "$textPath" ]; then
-          mv "$textPath" "$n"
-        else
-          echo -n "$text" > "$n"
-        fi
-        chmod +x "$n"
       '';
     };
 
@@ -175,7 +122,6 @@ in
   inherit changeFirst capitalize uncapitalize toCamelCase
     toMixedCase toSnakeCase isUpper isLower substituteInPlace
     isCamelCase isMixedCase isSnakeCase setToStringSep
-    toMultiLineString spaceToMinus mkStrictShellScript
-    cmdWithSubCommands writeStrictShellScriptBin strict-bash;
+    mkStrictShellScript writeStrictShellScriptBin strict-bash;
 
 }
