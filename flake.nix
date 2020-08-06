@@ -3,9 +3,6 @@
 
   outputs = { self }:
     {
-      overlay = final: prev:
-        {
-          inherit (prev.callPackage ./. { }) strict-bash;
-        };
+      overlay = final: prev: prev.callPackage ./. { };
     };
 }
