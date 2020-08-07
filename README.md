@@ -38,5 +38,6 @@ For actual real-world usage, see:
 
 https://github.com/johnae/world/blob/b425d56ed234189b84cf014704c791a3519c2f7c/flake.nix#L19
 https://github.com/johnae/world/blob/b425d56ed234189b84cf014704c791a3519c2f7c/flake.nix#L150
+https://github.com/johnae/world/blob/b425d56ed234189b84cf014704c791a3519c2f7c/shell.nix#L12
 and
 https://github.com/johnae/world/blob/b425d56ed234189b84cf014704c791a3519c2f7c/.buildkite/util/default.nix#L9
