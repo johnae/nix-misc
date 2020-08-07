@@ -35,9 +35,16 @@ let
     (name: value: '' --subst-var-by ${name} "${value}"'')}
   '';
 
-  ## A helper for creating shell script derivations from files
-  ## see above - enables one to get syntax highlighting while
-  ## developing.
+
+  ## The different helpers below enable the "unofficial bash strict mode" and
+  ## also checks the scripts using shellcheck and will refuse to build if shellcheck
+  ## complains. See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
+  ## and https://www.shellcheck.net/.
+
+  ## A helper for creating shell script derivations from files.
+  ## Fail on undefined variables etc. and enforces a shellcheck as part of build.
+  ## We skip SC1117 see: https://github.com/koalaman/shellcheck/wiki/SC1117 as
+  ## it has been retired (and is kind of annoying).
   mkStrictShellScript =
     { name
     , src
@@ -68,7 +75,7 @@ let
       '';
     };
 
-  ## Fail on undefined variables etc. and enforce shellcheck on all scripts.
+  ## Fail on undefined variables etc. and enforces a shellcheck as part of build.
   ## We skip SC1117 see: https://github.com/koalaman/shellcheck/wiki/SC1117 as
   ## it has been retired (and is kind of annoying).
   writeStrictShellScriptBin = name: text:
@@ -89,8 +96,10 @@ let
       '';
     };
 
-  ## Just store it directly in nix store without containing /bin dir,
-  ## otherwise same as above.
+  ## Just store it directly in nix store without containing /bin dir.
+  ## Fail on undefined variables etc. and enforces a shellcheck as part of build.
+  ## We skip SC1117 see: https://github.com/koalaman/shellcheck/wiki/SC1117 as
+  ## it has been retired (and is kind of annoying).
   writeStrictShellScript = name: text:
     writeTextFile {
       inherit name;
@@ -108,7 +117,12 @@ let
 
 
   ## Takes shell code on stdin, runs shellcheck on it and automatically adds
-  ## the inofficial strict-mode - eg. "set -euo pipefail"
+  ## the unofficial strict-mode - eg. "set -euo pipefail". Useful in CI for example,
+  ## where you can wrap your scripts in something like:
+  ## strict-bash <<'SH'
+  ## echo starting
+  ## mycommand > out.txt
+  ## SH
   strict-bash = writeStrictShellScriptBin "strict-bash" ''
     ## first define a random script name and make it executable
     script="$(mktemp /tmp/script.XXXXXX.sh)"
