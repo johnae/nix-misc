@@ -148,12 +148,78 @@ let
     ## if all of the above went well - execute the script
     "$script"
   '';
+
+  ansiEsc = code: "[${toString code}m";
+
+  mkSimpleShell =
+    { bashInteractive
+    , coreutils
+    , system
+    , writeTextFile
+    , writeShellScript
+    , lib
+    }:
+    let
+      bashPath = "${bashInteractive}/bin/bash";
+      _system = system;
+
+      stdenv = writeTextFile {
+        name = "basic-stdenv";
+        destination = "/setup";
+        text = ''
+          : ''${outputs:=out}
+          runHook() {
+            eval "$shellHook"
+            unset runHook
+          }
+        '';
+      };
+    in
+    { name
+    , intro ? ""
+    , packages ? [ ]
+    , meta ? { }
+    , passthru ? { }
+    }:
+    let
+      script = writeShellScript "${name}-hook" ''
+        export PATH=${lib.makeBinPath packages}/bin:''${PATH:+:''${PATH}}
+        __shell-intro() {
+          cat<<INTRO
+        ${intro}
+        INTRO
+        }
+        if [[ ''${DIRENV_IN_ENVRC:-} = 1 ]]; then
+          __shell-intro
+        else
+          __shell-prompt() {
+            __shell-intro
+            __shell-prompt() { :; }
+          }
+          PROMPT_COMMAND=__shell-prompt''${PROMPT_COMMAND+;$PROMPT_COMMAND}
+        fi
+      '';
+    in
+    (derivation {
+      inherit name system;
+      builder = bashPath;
+      args = [ "-ec" "${coreutils}/bin/ln -s ${script} $out; exit 0" ];
+      stdenv = stdenv;
+      shellHook = ''
+        unset NIX_BUILD_TOP NIX_BUILD_CORES NIX_BUILD_TOP NIX_STORE
+        unset TEMP TEMPDIR TMP TMPDIR
+        unset builder name out shellHook stdenv system
+        unset dontAddDisableDepTrack outputs
+        export SHELL=${bashPath}
+        source "${script}"
+      '';
+    }) // { inherit meta passthru; } // passthru;
 in
 {
   inherit changeFirst capitalize uncapitalize toCamelCase
     toMixedCase toSnakeCase isUpper isLower substituteInPlace
     isCamelCase isMixedCase isSnakeCase setToStringSep
     mkStrictShellScript writeStrictShellScript
-    writeStrictShellScriptBin strict-bash;
+    writeStrictShellScriptBin strict-bash mkSimpleShell ansiEsc;
 
 }
