@@ -149,8 +149,6 @@ let
     "$script"
   '';
 
-  ansiEsc = code: "[${toString code}m";
-
   mkSimpleShell =
     { bashInteractive
     , coreutils
@@ -220,6 +218,6 @@ in
     toMixedCase toSnakeCase isUpper isLower substituteInPlace
     isCamelCase isMixedCase isSnakeCase setToStringSep
     mkStrictShellScript writeStrictShellScript
-    writeStrictShellScriptBin strict-bash mkSimpleShell ansiEsc;
+    writeStrictShellScriptBin strict-bash mkSimpleShell;
 
 }
