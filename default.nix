@@ -158,7 +158,8 @@ let
     , lib
     }:
     let
-      bashPath = "${bashInteractive}/bin/bash";
+      bashBin = "${bashInteractive}/bin";
+      bashPath = "${bashBin}/bash";
       _system = system;
 
       stdenv = writeTextFile {
@@ -181,7 +182,11 @@ let
     }:
     let
       script = writeShellScript "${name}-hook" ''
-        export PATH=${lib.makeBinPath packages}/bin:''${PATH:+:''${PATH}}
+        PATH=''${PATH%:/path-not-set}
+        PATH=''${PATH#/path-not-set:}
+        PATH=''${PATH#:}
+        PATH=''${PATH#${bashBin}:}
+        export PATH=${bashBin}:${lib.makeBinPath packages}''${PATH:+:''${PATH}}
         __shell-intro() {
           cat<<INTRO
         ${intro}
@@ -201,6 +206,7 @@ let
     (derivation {
       inherit name system;
       builder = bashPath;
+      PATH = "";
       args = [ "-ec" "${coreutils}/bin/ln -s ${script} $out; exit 0" ];
       stdenv = stdenv;
       shellHook = ''
