@@ -1,30 +1,16 @@
-{ stdenv, lib, shellcheck, coreutils, writeTextFile, ... }:
+{ stdenv
+, lib
+, shellcheck
+, coreutils
+, writeTextFile
+, writeShellScript
+, system
+, bashInteractive
+, ...
+}:
+
 let
-  inherit (lib) stringToCharacters concatStringsSep
-    toUpper toLower splitString mapAttrsToList
-    stringAsChars makeSearchPath;
-  inherit (builtins) head tail concatMap;
-  changeFirst = s: fn:
-    let
-      c = stringToCharacters s;
-    in
-    concatStringsSep "" ([ (fn (head c)) ] ++ (tail c));
-  capitalize = s: changeFirst s toUpper;
-  uncapitalize = s: changeFirst s toLower;
-  toCamelCase = s: concatStringsSep "" (map (capitalize) (splitString "_" s));
-  isCamelCase = s: s == (toCamelCase s);
-  toMixedCase = s: uncapitalize (toCamelCase s);
-  isMixedCase = s: s == (toMixedCase s);
-  isAlpha = c: (toUpper c) != (toLower c);
-  isUpper = c: (isAlpha c) && c == (toUpper c);
-  isLower = c: !(isUpper c);
-  toSnakeCase = s: concatStringsSep "" (concatMap
-    (x:
-      if isUpper x then [ "_" (toLower x) ] else [ x ]
-    )
-    (stringToCharacters s)
-  );
-  isSnakeCase = s: s == (toSnakeCase s);
+  inherit (lib) concatStringsSep mapAttrsToList;
 
   setToStringSep = sep: x: fun: concatStringsSep sep (mapAttrsToList fun x);
 
@@ -36,9 +22,10 @@ let
   '';
 
 
-  ## The different helpers below enable the "unofficial bash strict mode" and
-  ## also checks the scripts using shellcheck and will refuse to build if shellcheck
-  ## complains. See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
+  ## The different helpers below makes bash much stricter.
+  ## As part of the build step, they also check the scripts using shellcheck
+  ## and will refuse to build if shellcheck complains.
+  ## See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
   ## and https://www.shellcheck.net/.
 
   ## A helper for creating shell script derivations from files.
@@ -96,7 +83,7 @@ let
       '';
     };
 
-  ## Just store it directly in nix store without containing /bin dir.
+  ## Stores it directly at $out in nix store (eg. no containing /bin dir).
   ## Fail on undefined variables etc. and enforces a shellcheck as part of build.
   ## We skip SC1117 see: https://github.com/koalaman/shellcheck/wiki/SC1117 as
   ## it has been retired (and is kind of annoying).
@@ -114,7 +101,6 @@ let
         ${shellcheck}/bin/shellcheck -e SC1117 -s bash -f tty $out
       '';
     };
-
 
   ## Takes shell code on stdin, runs shellcheck on it and automatically adds
   ## the unofficial strict-mode - eg. "set -euo pipefail". Useful in CI for example,
@@ -149,6 +135,8 @@ let
     "$script"
   '';
 
+  mkDevShell = mkSimpleShell { inherit bashInteractive coreutils system writeTextFile writeShellScript lib; };
+
   mkSimpleShell =
     { bashInteractive
     , coreutils
@@ -179,8 +167,10 @@ let
     , packages ? [ ]
     , meta ? { }
     , passthru ? { }
-    }:
+    , ...
+    }@attrs:
     let
+      extraAttrs = builtins.removeAttrs attrs [ "name" "intro" "packages" "meta" "passthru" ];
       script = writeShellScript "${name}-hook" ''
         PATH=''${PATH%:/path-not-set}
         PATH=''${PATH#/path-not-set:}
@@ -203,7 +193,7 @@ let
         fi
       '';
     in
-    (derivation {
+    (derivation ({
       inherit name system;
       builder = bashPath;
       PATH = "";
@@ -217,13 +207,9 @@ let
         export SHELL=${bashPath}
         source "${script}"
       '';
-    }) // { inherit meta passthru; } // passthru;
+    } // extraAttrs)) // { inherit meta passthru; } // passthru;
 in
 {
-  inherit changeFirst capitalize uncapitalize toCamelCase
-    toMixedCase toSnakeCase isUpper isLower substituteInPlace
-    isCamelCase isMixedCase isSnakeCase setToStringSep
-    mkStrictShellScript writeStrictShellScript
-    writeStrictShellScriptBin strict-bash mkSimpleShell;
-
+  inherit substituteInPlace mkStrictShellScript writeStrictShellScript
+    writeStrictShellScriptBin strict-bash mkSimpleShell mkDevShell;
 }

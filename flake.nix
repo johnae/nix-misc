@@ -4,8 +4,8 @@
   outputs = { self, nixpkgs }:
     {
       overlay = final: prev: import ./. {
-        inherit (prev)
-          stdenv lib shellcheck coreutils writeTextFile;
+        inherit (prev) stdenv lib shellcheck coreutils
+          writeTextFile writeShellScript system bashInteractive;
       };
     };
 }
