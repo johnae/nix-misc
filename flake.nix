@@ -18,86 +18,17 @@
 
       lib = {
         inherit setToStringSep substituteInPlace;
-
-        mkSimpleShell =
-          { bashInteractive
-          , coreutils
-          , system
-          , writeTextFile
-          , writeShellScript
-          }:
-          let
-            bashBin = "${bashInteractive}/bin";
-            bashPath = "${bashBin}/bash";
-            _system = system;
-
-            stdenv = writeTextFile {
-              name = "basic-stdenv";
-              destination = "/setup";
-              text = ''
-                : ''${outputs:=out}
-                runHook() {
-                  eval "$shellHook"
-                  unset runHook
-                }
-              '';
-            };
-          in
-          { name
-          , intro ? ""
-          , packages ? [ ]
-          , meta ? { }
-          , passthru ? { }
-          , ...
-          }@attrs:
-          let
-            extraAttrs = builtins.removeAttrs attrs [ "name" "intro" "packages" "meta" "passthru" ];
-            script = writeShellScript "${name}-hook" ''
-              PATH=''${PATH%:/path-not-set}
-              PATH=''${PATH#/path-not-set:}
-              PATH=''${PATH#:}
-              PATH=''${PATH#${bashBin}:}
-              export PATH=${bashBin}:${makeBinPath packages}''${PATH:+:''${PATH}}
-              __shell-intro() {
-                cat<<INTRO
-              ${intro}
-              INTRO
-              }
-              if [[ ''${DIRENV_IN_ENVRC:-} = 1 ]]; then
-                __shell-intro
-              else
-                __shell-prompt() {
-                  __shell-intro
-                  __shell-prompt() { :; }
-                }
-                PROMPT_COMMAND=__shell-prompt''${PROMPT_COMMAND+;$PROMPT_COMMAND}
-              fi
-            '';
-          in
-          (derivation ({
-            inherit name system;
-            builder = bashPath;
-            PATH = "";
-            args = [ "-ec" "${coreutils}/bin/ln -s ${script} $out; exit 0" ];
-            stdenv = stdenv;
-            shellHook = ''
-              unset NIX_BUILD_TOP NIX_BUILD_CORES NIX_BUILD_TOP NIX_STORE
-              unset TEMP TEMPDIR TMP TMPDIR
-              unset builder name out shellHook stdenv system
-              unset dontAddDisableDepTrack outputs
-              export SHELL=${bashPath}
-              source "${script}"
-            '';
-          } // extraAttrs)) // { inherit meta passthru; } // passthru;
       };
+
     in
     {
       inherit lib;
+
       overlay = final: prev:
         let
           inherit (prev) stdenv shellcheck writeTextFile writeShellScript;
 
-          ## The different helpers below makes bash much stricter.
+          ## The different helpers below make bash much stricter.
           ## As part of the build step, they also check the scripts using shellcheck
           ## and will refuse to build if shellcheck complains.
           ## See: http://redsymbol.net/articles/unofficial-bash-strict-mode/
