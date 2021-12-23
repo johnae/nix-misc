@@ -42,8 +42,9 @@
             { name
             , src
             , substitutions ? { }
+            , meta ? {}
             }: stdenv.mkDerivation {
-              inherit name;
+              inherit name meta;
               buildCommand = ''
                 install -v -D -m755 ${src} $out/bin/${name}
                 ${lib.substituteInPlace "$out/bin/${name}" substitutions}
